@@ -4,29 +4,18 @@
     var FACEBOOK = {
             MODULE: 'user.fb',
             TEMPLATE_MODULE: 'user.fbtmpl',
-            FACTORY: 'AUTH.FBFACTORY',
             CONTROLLER: 'AUTH.FBCONTROLLER',
             DIRECTIVE: 'userFb',
             TEMPLATE_URL: 'template/fb.html',
-            CONTROLLER_AS: 'fb',
-            SETTINGS: {
-                isInit: false,
-                isLoggedIn: false
-            }
+            CONTROLLER_AS: 'fb'
         },
         GOOGLE = {
             MODULE: 'user.gmail',
             TEMPLATE_MODULE: 'user.gmailtmpl',
-            LOAD_EVENT: 'auth2',
-            FACTORY: 'AUTH.GOOGLEFACTORY',
             CONTROLLER: 'AUTH.GOOGLECONTROLLER',
             DIRECTIVE: 'userGmail',
             TEMPLATE_URL: 'template/gmail.html',
-            CONTROLLER_AS: 'gmail',
-            SETTINGS: {
-                isInit: false,
-                isLoggedIn: false
-            }
+            CONTROLLER_AS: 'gmail'
         },
         POPUP = {
             MODULE: 'user.popup',
@@ -52,28 +41,7 @@
         e.stopPropagation();
     }
 
-    function loadScriptsAsyncfunction(d, s, id, url, e) {
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) {
-            return;
-        }
-        js = d.createElement(s);
-        js.id = id;
-        js.async = true;
-        js.src = url;
-        js.onload = function() {
-            var event = new Event(e);
-            window.dispatchEvent(event);
-        };
-
-        window.addEventListener('load', function() {
-            fjs.parentNode.insertBefore(js, fjs);
-        }, false);
-    };
-
-    loadScriptsAsyncfunction(document, 'script', 'facebook-jssdk', '//connect.facebook.net/en_US/sdk.js', 'FACEBOOK_API_LOADED');
-    loadScriptsAsyncfunction(document, 'script', 'google-jssdk', 'https://apis.google.com/js/api:client.js', 'GOOGLE_API_LOADED');
-
+    
     angular.module(TEMPLATES.MODULE, TEMPLATES.DEPENDENCIES);
     angular.module(MAIN_MODULE.MODULE, MAIN_MODULE.DEPENDENCIES);
 
@@ -132,86 +100,35 @@
 
     angular.module(FACEBOOK.MODULE, [])
         .constant('FACEBOOK_CONSTANTS', {
-            SIGN_IN_LISTENER: 'FB_SIGNED_IN',
-            STATUS: {
-                CONNECTED: 'connected',
-                NOT_AUTHORIZED: 'not_authorized'
-            }
+            SIGN_IN_LISTENER: 'FB_SIGNED_IN'
+            
         })
-        .factory(FACEBOOK.FACTORY, ['$q', '$rootScope', 'userauth', 'FACEBOOK_CONSTANTS',
-            function($q, $rootScope, userauth, FACEBOOK_CONSTANTS) {
-                var FB_DEFER = $q.defer(),
-                    fb = {
-                        fbAsync: function(cB) {
-                            FB_DEFER.promise.then(cB);
-                        },
-                        actOnLoginState: function(response) {
-                            if (response.status == FACEBOOK_CONSTANTS.STATUS.CONNECTED) {
-                                fb.fbAsync(function(FB) {
-                                    FB.api('/me', function(meresponse) {
-                                        $rootScope.$broadcast(FACEBOOK_CONSTANTS.SIGN_IN_LISTENER, response, meresponse);
-                                    });
-                                });
-                            } else if (response.status == FACEBOOK_CONSTANTS.STATUS.NOT_AUTHORIZED) {
-                                $rootScope.$broadcast(FACEBOOK_CONSTANTS.SIGN_IN_LISTENER, response);
-                            } else {
-                                $rootScope.$broadcast(FACEBOOK_CONSTANTS.SIGN_IN_LISTENER, response);
-                            }
-                        }
-                    };
-
-                if (userauth.FBsettings === null) {
-                    throw "Please provide FB login webapp settings";
-                }
-
-                // When FB is initiated
-                window.fbAsyncInit = function() {
-                    FB.init(userauth.FBsettings);
-
-                    FB.getLoginStatus(function(response) {
-                        fb.actOnLoginState(response);
-                    }, userauth.FBLoginRtnsettings);
-
-                    FB_DEFER.resolve(FB);
-                };
-
-                return fb;
-            }
-        ])
-        .controller(FACEBOOK.CONTROLLER, ['$scope', 'FACEBOOK_CONSTANTS', FACEBOOK.FACTORY, 'userauth',
-            function($scope, FACEBOOK_CONSTANTS, fbfactory, userauth) {
+        
+        .controller(FACEBOOK.CONTROLLER, ['$scope', '$rootScope','FACEBOOK_CONSTANTS',
+            function($scope, $rootScope,FACEBOOK_CONSTANTS) {
                 var that = this;
 
                 function FBLoginFn() {
-                    FB.login(function(response) {
-                        fbfactory.actOnLoginState(response);
-                    }, userauth.FBLoginRtnsettings);
+                   window.tyModule = 'checkout_v2';
+                    var win = window.open('/ty2/account/FBLogin/', 'FacebookLogin', 'width=900, height=500');
                 }
-
-                that.settings = $scope.settings = $scope.settings || FACEBOOK.SETTINGS;
+                window.FBLoginCallback = function(){
+                    $rootScope.$broadcast(FACEBOOK_CONSTANTS.SIGN_IN_LISTENER,window.FBCallbackResp);
+                    
+                };
 
                 $scope.FBLogin = FBLoginFn;
             }
         ])
-        .directive(FACEBOOK.DIRECTIVE, ['FACEBOOK_CONSTANTS',
-            function(FACEBOOK_CONSTANTS) {
+        .directive(FACEBOOK.DIRECTIVE,
+            function() {
                 var fb = {
-                    scope: {
-                        settings: '=?'
-                    },
+                    
                     replace: true,
                     templateUrl: FACEBOOK.TEMPLATE_URL,
                     transclude: true,
                     link: function($scope, $element, $attrs, popUpController) {
-                        $scope.$on(FACEBOOK_CONSTANTS.SIGN_IN_LISTENER, function(event, response, meresponse) {
-                            $scope.$apply(function() {
-                                $scope.settings.isInit = true;
-                                if (response.status == FACEBOOK_CONSTANTS.STATUS.CONNECTED) {
-                                    $scope.settings.isLoggedIn = true;
-                                    popUpController.settings.isOpen = false;
-                                }
-                            });
-                        });
+                        
                     },
                     controllerAs: FACEBOOK.CONTROLLER_AS,
                     controller: FACEBOOK.CONTROLLER,
@@ -220,81 +137,53 @@
 
                 return fb;
             }
-        ]);
+        );
 
     angular.module(GOOGLE.MODULE, [])
         .constant('GOOGLE_CONSTANTS', {
-            SDK_LOADED: 'GOOGLE_API_LOADED',
+            
             SIGN_IN_LISTENER: 'GOOGLE_SIGNED_IN'
+           
         })
-        .factory(GOOGLE.FACTORY, ['$q', '$rootScope', 'userauth', 'GOOGLE_CONSTANTS',
-            function($q, $rootScope, userauth, GOOGLE_CONSTANTS) {
-                var GOOGLE_DEFER = $q.defer(),
-                    google = {
-                        onLogin: onLoginFn,
-                        googleAsync: function(cB) {
-                            GOOGLE_DEFER.promise.then(cB);
-                        }
-                    };
+        
+        .controller(GOOGLE.CONTROLLER, ['$scope','$rootScope', 'GOOGLE_CONSTANTS',
+            function($scope, $rootScope,GOOGLE_CONSTANTS) {
+                var that = this;
 
-                function onLoginFn(googleUser) {
-                    $rootScope.$broadcast(GOOGLE_CONSTANTS.SIGN_IN_LISTENER, googleUser);
+                function GMLoginFn() {
+                    window.tyModule = 'checkout_v2';
+                    var state = getRandomId('');
+                    var _gplusRedirectUri = 'http://public.beta.travelyaari.com/ty2/account/googlepluscallback';
+                    var _gplusClientId  = '504504447613-06so69o5p7dmm8t8nui3mjfs4opfkcrq.apps.googleusercontent.com';
+                    window.open('https://accounts.google.com/o/oauth2/auth?scope=' +
+                        'email%20profile&' +
+                        'cookie_policy=single_host_origin&' +
+                        'state=' + state + '&' +
+                        'redirect_uri=' + _gplusRedirectUri + '&'+
+                        'response_type=code&' +
+                        'client_id=' + _gplusClientId + '&',
+                        'GoogleLogin', 'width=900, height=500');
                 }
-
-                if (userauth.GoogleSettings === null) {
-                    throw "Please provide Google login webapp settings";
+                function getRandomId(prefix){
+                    return prefix + parseInt(Math.random() * 1000000, 10);
                 }
+                window.GPLoginCallback = function(){
+                    $rootScope.$broadcast(GOOGLE_CONSTANTS.SIGN_IN_LISTENER,window.GPCallbackResp);
+                    
+                };
 
-                // Execute after google SDK is loaded
-                window.addEventListener(GOOGLE_CONSTANTS.SDK_LOADED, function() {
-                    $rootScope.$broadcast(GOOGLE_CONSTANTS.SDK_LOADED);
-                    gapi.load(GOOGLE.LOAD_EVENT, function() {
-                        // Retrieve the singleton for the GoogleAuth library and set up the client.
-                        var auth = gapi.auth2.init(userauth.GoogleSettings);
-
-                        auth.currentUser.listen(onLoginFn);
-
-                        GOOGLE_DEFER.resolve([gapi, auth]);
-                    });
-                }, false)
-
-                return google;
+                $scope.GMLogin=GMLoginFn;
             }
         ])
-        .controller(GOOGLE.CONTROLLER, ['$scope', GOOGLE.FACTORY,
-            function($scope, GOOGLE_CONSTANTS, googlefactory) {
-                this.settings = $scope.settings = $scope.settings || GOOGLE.SETTINGS;
-            }
-        ])
-        .directive(GOOGLE.DIRECTIVE, [GOOGLE.FACTORY, 'GOOGLE_CONSTANTS',
-            function(googlefactory, GOOGLE_CONSTANTS) {
+        .directive(GOOGLE.DIRECTIVE,
+            function( ) {
                 var gmail = {
-                    scope: {
-                        settings: '=?'
-                    },
+                    scope:true,
                     replace: true,
                     templateUrl: GOOGLE.TEMPLATE_URL,
                     transclude: true,
                     link: function($scope, $element, $attrs, popUpController) {
-                        googlefactory.googleAsync(function(obj) {
-                            var gapi = obj[0],
-                                auth = obj[1];
-                            auth.attachClickHandler($element[0], {}, angular.noop,
-                                function(error) {
-                                    alert(JSON.stringify(error, undefined, 2));
-                                }
-                            );
-                        });
-
-                        $scope.$on(GOOGLE_CONSTANTS.SIGN_IN_LISTENER, function(event, response) {
-                            $scope.$apply(function() {
-                                $scope.settings.isInit = true;
-                                if (response.getBasicProfile() !== undefined) {
-                                    $scope.settings.isLoggedIn = true;
-                                    popUpController.settings.isOpen = false;
-                                }
-                            });
-                        });
+                        
                     },
                     controllerAs: GOOGLE.CONTROLLER_AS,
                     controller: GOOGLE.CONTROLLER,
@@ -303,7 +192,7 @@
 
                 return gmail;
             }
-        ]);
+        );
 
     angular.module(POPUP.TEMPLATE_MODULE, []).run(["$templateCache", function($templateCache) {
         $templateCache.put(POPUP.TEMPLATE_URL, "" +
@@ -317,7 +206,7 @@
 
     angular.module(FACEBOOK.TEMPLATE_MODULE, []).run(["$templateCache", function($templateCache) {
         $templateCache.put(FACEBOOK.TEMPLATE_URL, "" +
-            "<p class='user-social fb' ng-click='FBLogin()' ng-show='settings.isInit && !settings.isLoggedIn'>" +
+            "<p class='user-social fb' ng-click='FBLogin()'>" +
             "   <i class='fa fa-facebook social-icon'></i>" +
             "   <span ng-transclude></span>" +
             "</p>"
@@ -326,7 +215,7 @@
 
     angular.module(GOOGLE.TEMPLATE_MODULE, []).run(["$templateCache", function($templateCache) {
         $templateCache.put(GOOGLE.TEMPLATE_URL, "" +
-            "<p class='user-social gmail' ng-show='settings.isInit && !settings.isLoggedIn'>" +
+            "<p class='user-social gmail' ng-click='GMLogin()'>" +
             "   <i class='fa fa-google social-icon'></i>" +
             "   <span ng-transclude></span>" +
             "</p>"
